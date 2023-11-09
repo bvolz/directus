@@ -62,6 +62,10 @@ export function sanitizeQuery(rawQuery: Record<string, any>, accountability?: Ac
 		query.search = rawQuery['search'];
 	}
 
+	if (rawQuery['version']) {
+		query.version = rawQuery['version'];
+	}
+
 	if (rawQuery['export']) {
 		query.export = rawQuery['export'] as 'json' | 'csv';
 	}
@@ -100,6 +104,8 @@ function sanitizeSort(rawSort: any) {
 
 	if (typeof rawSort === 'string') fields = rawSort.split(',');
 	else if (Array.isArray(rawSort)) fields = rawSort as string[];
+
+	fields = fields.map((field) => field.trim());
 
 	return fields;
 }
