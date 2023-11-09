@@ -20,6 +20,7 @@ import { render } from 'micromustache';
 import { computed, inject, ref, toRefs, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Draggable from 'vuedraggable';
+import { usePreset } from "@/composables/use-preset";
 
 const props = withDefaults(
 	defineProps<{
@@ -31,6 +32,7 @@ const props = withDefaults(
 		layout?: LAYOUTS;
 		tableSpacing?: 'compact' | 'cozy' | 'comfortable';
 		fields?: Array<string>;
+    leveragePresets?: boolean;
 		template?: string | null;
 		disabled?: boolean;
 		enableCreate?: boolean;
@@ -47,6 +49,7 @@ const props = withDefaults(
 		layout: LAYOUTS.LIST,
 		tableSpacing: 'cozy',
 		fields: () => ['id'],
+    leveragePresets: false,
 		template: () => null,
 		disabled: false,
 		enableCreate: true,
@@ -190,6 +193,7 @@ watch(
 		}
 
 		const junctionCollection = relationInfo.value.junctionCollection.collection;
+    const junctionPreset = usePreset(ref<string>(junctionCollection));
 
 		const contentWidth: Record<string, number> = {};
 
@@ -199,9 +203,19 @@ watch(
 					contentWidth[key] = 5;
 				}
 
-				if (String(item[key]).length > contentWidth[key]) {
-					contentWidth[key] = String(item[key]).length;
-				}
+        if (props.leveragePresets) {
+          const displayedValue = get(item, key);
+
+          if (displayedValue?.length > contentWidth[key]!) {
+            contentWidth[key] = displayedValue.length;
+          }
+        } else {
+
+          if (String(item[key]).length > contentWidth[key]!) {
+            contentWidth[key] = String(item[key]).length;
+          }
+        }
+
 			});
 		});
 
@@ -212,12 +226,29 @@ watch(
 				// when user has no permission to this field or junction collection
 				if (!field) return null;
 
-				return {
-					text: field.name,
-					value: key,
-					width: contentWidth[key] < 10 ? contentWidth[key] * 16 + 10 : 160,
-					sortable: !['json'].includes(field.type),
-				};
+        // determine the width of the column; proceed as follows:
+        //  1. check, if there is a preset for the junction collection
+        //  1.1 check, if there is a width for the field and use it
+        //  2. check, if there is a preset for the collection this field belongs to
+        //  2.1 check, if there is a width for the field and use it
+        //  3. compute field width based on displayed values or column label (chose the longer one)
+
+				let columnWidth = contentWidth[key]! < 10 ? contentWidth[key]! * 16 + 10 : 160; // part of step 3
+
+				if (props.leveragePresets) {
+          const contentWidthFinal = field.name.length > contentWidth[key]! ? field.name.length : contentWidth[key];
+
+          columnWidth = junctionPreset.layoutOptions.value?.widths[key];                                            // step 1
+          columnWidth ??= usePreset(ref<string>(field.meta!.collection)).layoutOptions.value?.widths[field.field]   // step 2
+          columnWidth ??= contentWidthFinal! < 10 ? contentWidthFinal! * 16 + 10 : contentWidthFinal! * 10;         // step 3
+        }
+
+        return {
+          text: field.name,
+          value: key,
+          width: columnWidth,
+          sortable: ![ 'json' ].includes(field.type),
+        };
 			})
 			.filter((key) => key !== null);
 	},

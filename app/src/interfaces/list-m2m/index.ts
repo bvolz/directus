@@ -248,6 +248,31 @@ export default defineInterface({
 					width: 'half',
 				},
 			},
+			{
+				field: 'leveragePresets',
+				name: '$t:leverage_presets',
+				schema: {
+					default_value: false,
+				},
+				meta: {
+					interface: 'boolean',
+					options: {
+						label: '$t:enabled',
+					},
+					width: 'full',
+					hidden: true,
+					conditions: [
+						{
+							rule: {
+								layout: {
+									_eq: 'table',
+								},
+							},
+							hidden: false,
+						},
+					],
+				},
+			},
 		];
 	},
 	recommendedDisplays: ['related-values'],

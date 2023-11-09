@@ -20,6 +20,7 @@ import { render } from 'micromustache';
 import { computed, inject, ref, toRefs, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Draggable from 'vuedraggable';
+import { usePreset } from "@/composables/use-preset";
 
 const props = withDefaults(
 	defineProps<{
@@ -173,13 +174,17 @@ watch(
 
 		(displayItems.value ?? []).forEach((item: Record<string, any>) => {
 			props.fields.forEach((key) => {
-				if (!contentWidth[key]) {
+        // in case we do not yet know how long the content is, assume its length is 5 characters
+        if (!(key in contentWidth) || !contentWidth[key]) {
 					contentWidth[key] = 5;
 				}
 
-				if (String(item[key]).length > contentWidth[key]) {
-					contentWidth[key] = String(item[key]).length;
-				}
+        const displayedValue = get(item, key);
+
+        // check and update the width, iff the content length is larger than the current length
+        if (displayedValue?.length > contentWidth[key]!) {
+          contentWidth[key] = displayedValue.length;
+        }
 			});
 		});
 
@@ -190,10 +195,22 @@ watch(
 				// when user has no permission to this field or junction collection
 				if (!field) return null;
 
+        // determine width (check, if there is a preset available; only compute width in case there is none)
+				const presets = usePreset(ref<string>(field.meta!.collection));
+        const widths = presets.layoutOptions.value ? presets.layoutOptions.value.widths : undefined;
+        let width = undefined;
+
+        if (widths && widths[field.field]) {
+          width = widths[field.field];
+        } else {
+          width = contentWidth[key]! * 16 + 10;
+        }
+
 				return {
 					text: field.name,
 					value: key,
-					width: contentWidth[key] < 10 ? contentWidth[key] * 16 + 10 : 160,
+					//width: contentWidth[key] < 10 ? contentWidth[key] * 16 + 10 : 160,
+					width: width,
 					sortable: !['json'].includes(field.type),
 				};
 			})

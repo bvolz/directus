@@ -2200,3 +2200,5 @@ operations:
     batch: Stapel
     batch_size: Stapelgröße
     cache: Cache
+leverage_presets: Nutze vorhandene Voreinstellungen für Tabellenlayout
+
